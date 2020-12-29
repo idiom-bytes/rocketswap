@@ -12,13 +12,10 @@
 
   let selected_token: TokenListType
   let token_metrics: TokenMetricsType = {}
-  let metric: MetricsUpdateType
-  $: metric = token_metrics[selected_token?.contract_name]
   let trade_details: { currency_out: number; token_out: number; currency_slippage: number; token_slippage: number; contract_name: string; token_symbol: string }
   $: trade_details
   
   let swap_panel_unsub = swap_panel_store.subscribe((update) => {
-    // console.log('quote panel update : ', update)
     if (update.slot_b.selected_token?.contract_name !== selected_token?.contract_name) {
       ws.leavePriceFeed(selected_token?.contract_name)
       selected_token = update.slot_b.selected_token
@@ -30,7 +27,6 @@
 
   function getTradeDetails(metrics) {
     if (!metrics) return
-    // console.log(metrics)
     token_metrics = metrics
     if (Object.keys(token_metrics).length) {
       trade_details = {
@@ -38,15 +34,15 @@
         contract_name: $swap_panel_store.slot_b.selected_token?.contract_name,
         token_symbol: $swap_panel_store.slot_b.selected_token?.token_symbol
       }
-      // console.log(trade_details)
     }
   }
 
   function switchPositions() {
-    const swap_panel = $swap_panel_store
-    swap_panel.slot_a.position = swap_panel.slot_a.position === 'from' ? 'to' : 'from'
-    swap_panel.slot_b.position = swap_panel.slot_a.position === 'from' ? 'to' : 'from'
-    swap_panel_store.set(swap_panel)
+    swap_panel_store.update(prev_state => {
+      prev_state.slot_a.position = prev_state.slot_a.position === 'from' ? 'to' : 'from'
+      prev_state.slot_b.position = prev_state.slot_a.position === 'from' ? 'to' : 'from'
+      return prev_state
+    })
   }
 
   function calcDetails() {

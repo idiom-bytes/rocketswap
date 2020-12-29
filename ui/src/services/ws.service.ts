@@ -1,6 +1,6 @@
 import socket from 'socket.io-client'
 import { token_metrics_store } from '../store'
-import type { MetricsUpdateType, TokenMetricsType } from '../types/api.types'
+import type { MetricsUpdateType, TokenMetricsType, UserLpUpdateType } from '../types/api.types'
 import { getBaseUrl } from '../utils'
 
 /** Singleton socket.io service */
@@ -22,9 +22,7 @@ export class WsService {
     console.log('WS Service STARTED')
     this.base_url = getBaseUrl(document.location.href)
     this.port = 3001
-    // console.log(socket)
     this.connection = socket(`${this.base_url}:${this.port}`)
-    // console.log(this.connection)
     this.setupEvents()
     this.setupSubs()
   }
@@ -48,8 +46,12 @@ export class WsService {
     })
   }
 
+  public joinUserLpFeed(vk: string) {
+    this.connection.emit('join_room', `user_lp_feed:${vk}`)
+    this.connection.on(`user_lp_feed:${vk}`, this.handleMetricsUpdate)
+  }
+
   public joinPriceFeed(contract_name: string) {
-    // console.log(Date.now(), 'joined room')
     this.connection.emit('join_room', `price_feed:${contract_name}`)
     this.connection.on(`price_feed:${contract_name}`, this.handleMetricsUpdate)
   }
@@ -57,6 +59,10 @@ export class WsService {
   public leavePriceFeed(contract_name: string) {
     this.connection.emit('leave_room', `price_feed:${contract_name}`)
     this.connection.off(`price_feed:${contract_name}`)
+  }
+
+  private handleUserLpUpdate = (user_lp_update: UserLpUpdateType) => {
+    console.log(user_lp_update)
   }
 
   private handleMetricsUpdate = (metrics_update: MetricsUpdateType) => {

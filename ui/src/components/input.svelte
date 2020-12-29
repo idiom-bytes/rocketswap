@@ -15,33 +15,29 @@
   export let token_metrics: TokenMetricsType
 
   let selected_slot: SlotType
+  let balance: number, role, slot_position, selected_token, wallet, input_amount, slots
+
+  $: wallet_balance = parseFloat(wallet.balance ? stripTrailingZero(wallet.balance.toFixed(8)) : '')
   $: selected_slot
   $: selected_token
-  let balance: number, role, slot_position, selected_token, wallet, input_amount
-  let context_store: Writable<SwapPanelType>
-  $: wallet_balance = parseFloat(wallet.balance ? stripTrailingZero(wallet.balance.toFixed(8)) : '')
-
-  $: balance
+  $: balance = 0
+  // $: wallet = $wallet_store
   $: input_amount
+  $: token_metrics
+  $: slot_position
+  $: slots
 
   let input_unsub
 
   onMount(() => {
-    if (context === 'swap') {
-      context_store = swap_panel_store
-    } else if (context === 'pool') {
-      context_store = pool_panel_store
-    }
-    input_unsub = context_store.subscribe((update) => handleInputStoreUpdate(update))
+    input_unsub = swap_panel_store.subscribe((update) => handleInputStoreUpdate(update))
   })
 
   let wallet_unsub = wallet_store.subscribe((update) => {
-    // if (isWalletConnected(update)) {
     wallet = update
     if (selected_token && wallet.tokens) {
       balance = wallet.tokens.balances[selected_token.contract_name]
     }
-    // }
   })
 
   onDestroy(() => {
@@ -50,8 +46,8 @@
   })
 
   function handleInputStoreUpdate(update) {
+    slots = update
     selected_slot = getPosition(update)
-    balance = selected_slot.selected_token?.balance
     role = selected_slot.role
     slot_position = selected_slot.position
     selected_token = selected_slot.selected_token
@@ -70,7 +66,7 @@
   function handleInputChange(e) {
     let active_input
     let other_input
-    context_store.update((current_value) => {
+    swap_panel_store.update((current_value) => {
       active_input = current_value.slot_a.role === role ? current_value.slot_a : current_value.slot_b
       other_input = current_value.slot_a.role !== role ? current_value.slot_a : current_value.slot_b
       const contract_name = role === 'currency' ? other_input.selected_token.contract_name : active_input.selected_token.contract_name
@@ -98,20 +94,19 @@
   }
 
   function handleMaxInput() {
-    const slots = $context_store
-    let selected_token = slots.slot_b.selected_token
-    const metrics = token_metrics[selected_token?.contract_name]
-    if (role === 'currency') {
-      // slots.slot_a.input_amount = parseFloat(wallet_balance.toFixed(6)) || 0
-      slots.slot_a.input_amount = parseFloat(stripTrailingZero(wallet_balance.toFixed(8))) || 0
-      // console.log(slots.slot_a.input_amount)
-      if (metrics) slots.slot_b.input_amount = parseFloat(stripTrailingZero((wallet_balance / metrics.price).toFixed(6)))
-    } else if (role === 'token') {
-      slots.slot_b.input_amount = parseFloat(stripTrailingZero(selected_token.balance.toFixed(8))) || 0
-      if (metrics) slots.slot_a.input_amount = parseFloat(stripTrailingZero((selected_token.balance * metrics.price).toFixed(6)))
-    }
-
-    context_store.set(slots)
+    swap_panel_store.update((prev_state) => {
+      console.log(prev_state)
+      let selected_token = prev_state.slot_b.selected_token
+      const metrics = token_metrics[selected_token?.contract_name]
+      if (role === 'currency') {
+        prev_state.slot_a.input_amount = parseFloat(stripTrailingZero(wallet_balance.toFixed(8))) || 0
+        if (metrics) prev_state.slot_b.input_amount = parseFloat(stripTrailingZero((wallet_balance / metrics.price).toFixed(6)))
+      } else if (role === 'token') {
+        prev_state.slot_b.input_amount = parseFloat(stripTrailingZero(selected_token.balance.toFixed(8))) || 0
+        if (metrics) prev_state.slot_a.input_amount = parseFloat(stripTrailingZero((selected_token.balance * metrics.price).toFixed(6)))
+      }
+      return prev_state
+    })
   }
 </script>
 

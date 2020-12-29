@@ -92,9 +92,13 @@ export class WalletService {
   private async updateBalances(vk?: string) {
     if (isWalletConnected(this.wallet_state)) {
       const res = await this.getBalances(vk)
-      this.wallet_state.tokens = res[0]
-      this.wallet_state.balance = res[1]
-      wallet_store.set(this.wallet_state)
+      wallet_store.update((update) => {
+        if (isWalletConnected(update)) {
+          update.tokens = res[0]
+          update.balance = res[1]
+        }
+        return update
+      })
       // console.log(this.wallet_state)
     }
   }
@@ -139,7 +143,7 @@ export class WalletService {
       this.lwc.sendTransaction(transaction, (res) => {
         console.log(res)
         if (res.status === 'success') {
-          this.toastService.addToast({ heading: 'Approval Successful.', text: `Approved ${amount} for transfer from ${contract_name}`, type: 'info' })
+          this.toastService.addToast({ heading: 'Approval Successful.', text: `Approved ${amount} for transfer to ${config.contractName}`, type: 'info' })
           resolve(res)
         } else reject(res)
       })
@@ -193,7 +197,6 @@ export class WalletService {
     console.log(approve_amount)
     if (approve_amount <= 0) return
     await this.approve(approve_amount, contract_name)
-    this.toastService.addToast({ heading: 'Approval succeeded !', text: `You have approved ${approve_amount} tokens.`, type: 'info' })
   }
 
   public async createMarket(args) {

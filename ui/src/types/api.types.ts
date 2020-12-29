@@ -32,6 +32,10 @@ export type MetricsUpdateType = {
   reserves: [string, string]
 }
 
+export type UserLpUpdateType = {
+  
+}
+
 export type TokenMetricsType = {
   [key: string]: MetricsUpdateType
 }
