@@ -14,7 +14,7 @@
   let token_metrics: TokenMetricsType = {}
   let trade_details: { currency_out: number; token_out: number; currency_slippage: number; token_slippage: number; contract_name: string; token_symbol: string }
   $: trade_details
-  
+
   let swap_panel_unsub = swap_panel_store.subscribe((update) => {
     if (update.slot_b.selected_token?.contract_name !== selected_token?.contract_name) {
       ws.leavePriceFeed(selected_token?.contract_name)
@@ -34,11 +34,12 @@
         contract_name: $swap_panel_store.slot_b.selected_token?.contract_name,
         token_symbol: $swap_panel_store.slot_b.selected_token?.token_symbol
       }
+      console.log(trade_details)
     }
   }
 
   function switchPositions() {
-    swap_panel_store.update(prev_state => {
+    swap_panel_store.update((prev_state) => {
       prev_state.slot_a.position = prev_state.slot_a.position === 'from' ? 'to' : 'from'
       prev_state.slot_b.position = prev_state.slot_a.position === 'from' ? 'to' : 'from'
       return prev_state
@@ -122,9 +123,6 @@
   .wrapper {
     flex-grow: 1;
     padding-top: 15px;
-    /* min-height: 100%; */
-    /* display: flex; */
-    /* justify-content: center; */
   }
   .slippage-display-container {
     margin: 0 auto;
@@ -155,7 +153,7 @@
     box-shadow: -1px 10px 82px 0px rgba(0, 0, 0, 0.3);
     -webkit-box-shadow: -1px 10px 82px 0px rgba(0, 0, 0, 0.3);
     -moz-box-shadow: -1px 10px 82px 0px rgba(0, 0, 0, 0.3);
-    padding-top: 15px;
+    padding: 15px 0px;
   }
 
   button {
