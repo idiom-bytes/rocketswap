@@ -2,12 +2,10 @@
   import { onDestroy, onMount } from 'svelte'
   import { config } from '../config'
   import { isWalletConnected } from '../services/wallet.service'
-  import { pool_panel_store, token_metrics_store } from '../store'
+  import { token_metrics_store } from '../store'
   import { show_token_select_store, swap_panel_store, wallet_store } from '../store'
   import { stripTrailingZero } from '../utils'
-  import type { Writable } from 'svelte/store'
   import type { SlotType, SwapPanelType, TokenMetricsType } from '../types/api.types'
-  import type { WalletConnectedType, WalletType } from '../types/wallet.types'
 
   export let position: 'from' | 'to'
   export let label
@@ -21,7 +19,6 @@
   $: selected_slot
   $: selected_token
   $: balance = 0
-  // $: wallet = $wallet_store
   $: input_amount
   $: token_metrics
   $: slot_position
