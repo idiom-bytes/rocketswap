@@ -66,12 +66,10 @@ export class WalletService {
   }
 
   private handleWalletInfo = async (wallet_update: WalletType) => {
-    console.log(wallet_update)
     let wallet_info: WalletType
     // console.log(wallet_info)
     if (isWalletConnected(wallet_update)) {
       wallet_info = wallet_update
-      console.log(wallet_info)
       if (wallet_info.wallets[0]) {
         const vk = wallet_info.wallets[0]
         const balances = await this.getBalances(vk)
@@ -91,15 +89,17 @@ export class WalletService {
 
   private async updateBalances(vk?: string) {
     if (isWalletConnected(this.wallet_state)) {
+      let prev = JSON.stringify(this.wallet_state)
       const res = await this.getBalances(vk)
-      wallet_store.update((update) => {
-        if (isWalletConnected(update)) {
-          update.tokens = res[0]
-          update.balance = res[1]
-        }
-        return update
-      })
-      // console.log(this.wallet_state)
+      this.wallet_state.tokens = res[0]
+      this.wallet_state.balance = res[1]
+
+      // only update the store if state changed
+      if (prev !== JSON.stringify(this.wallet_state)) wallet_store.set(this.wallet_state)
+      
+      //const lpRes = await this.apiService.getUserLpBalance(vk)
+      //if (lpRes) this.wallet_state.lp_balances = lpRes
+      
     }
   }
 
@@ -190,18 +190,14 @@ export class WalletService {
   private async approveDifference(vk: string, amount: number, contract_name: string) {
     let approved_amount = await this.getApprovedAmount(vk, contract_name)
     if (approved_amount && approved_amount.__fixed__) approved_amount = approved_amount.__fixed__
-    console.log(approved_amount)
-    console.log(amount)
     approved_amount = approved_amount ? parseFloat(approved_amount) : 0
     let approve_amount = amount - (approved_amount as number)
-    console.log(approve_amount)
     if (approve_amount <= 0) return
     await this.approve(approve_amount, contract_name)
   }
 
   public async createMarket(args) {
-    console.log(this.createTxInfo('create_market', args))
-    this.lwc.sendTransaction(this.createTxInfo('create_market', args), handleCreateMarket)
+    this.lwc.sendTransaction(this.createTxInfo('create_market', args), this.handleCreateMarket)
   }
 
   private handleSwapResult = (res) => {
@@ -209,21 +205,42 @@ export class WalletService {
     show_swap_confirm.set(false)
     this.toastService.addToast({ heading: 'Transaction Succeeded.', type: 'info' })
   }
-}
 
-function handleCreateMarket(res) {
-  let status = txResult(res.data)
-  if (status === 'success') {
-    // TODO Send info to toast controller success
+  private handleTxErrors(errors){
+    errors.forEach(error => {
+      let toastType = 'info'
+      if (error.includes("AssertionError")) {
+        error = error.split("'")[1]
+        toastType = "error"
+      }
+      this.toastService.addToast({ 
+        heading: 'Transaction Error.', 
+        type: toastType === 'info' ? 'info' : 'error',
+        text: error
+      })
+    })
   }
-  // TODO Send error(s) to toast controller
-}
 
-function txResult(txResults) {
-  if (txResults.errors) return txResults.errors
-  if (txResults.txBlockResult.status) {
-    if (txResults.txBlockResult.status === 0) return 'success'
-    if (txResults.txBlockResult.status === 1) return txResults.txBlockResult.errors
+  private txResult(txResults) {
+    if (txResults.errors) {
+      this.handleTxErrors(txResults.errors)
+      return txResults.errors
+    }
+    if (txResults.txBlockResult.status) {
+      if (txResults.txBlockResult.status === 0) return 'success'
+      if (txResults.txBlockResult.status === 1) {
+        this.handleTxErrors(txResults.txBlockResult.errors)
+        return txResults.txBlockResult.errors
+      }
+    }
+  }
+
+  private handleCreateMarket = (res) => {
+    console.log(this.txResult)
+    let status = this.txResult(res.data)
+    if (status === 'success') {
+      this.toastService.addToast({ heading: 'Transaction Succeeded.', type: 'info' })
+    }
   }
 }
 

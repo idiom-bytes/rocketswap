@@ -1,37 +1,49 @@
 <script lang="ts">
     import { onMount } from 'svelte'
     import { ApiService } from '../services/api.service'
-    import { pool_panel_store } from '../store'
+    import { pool_panel_store, wallet_store } from '../store'
     import { config } from '../config'
+    import { stringToFixed } from '../utils'
 
     export let statList = []
     export let title
+    export let pageState
 
     const apiService = ApiService.getInstance();
 
     let balances = []
 
-    $: selected_token = $pool_panel_store?.slot_b?.selected_token || undefined;
-    $: token_symbol = selected_token ? selected_token.token_symbol : undefined;
-    $: token_contract = selected_token ? selected_token.contract_name : undefined;
-    $: lp_balance = balances[token_contract] || "0"
-    $: lp_share = selected_token?.info ? lp_balance / selected_token.info.lp : undefined
+    $: selectedToken = pageState?.selectedToken;
+    $: tokenSymbol = selectedToken ? selectedToken.token_symbol : undefined;
+    $: tokenContract = selectedToken ? selectedToken.contract_name : undefined;
+    $: lp_balances = $wallet_store?.wallet_state?.lp_balances || {};
+    $: lp_balance = lp_balances[tokenContract] || "0";
+    $: lp_share = pageState.tokenLp ? lp_balance / pageState.tokenLp : 0;
     $: lp_share_percent = lp_share ? parseFloat(lp_share * 100).toFixed(1) : "0";
-    $: currencyValue = $pool_panel_store?.slot_a?.input_amount || "";
-    $: tokenValue = $pool_panel_store?.slot_b?.input_amount || "";
-    $: bothValues = currencyValue !== "" && tokenValue !== ""
+    $: currencyValue = pageState?.currencyAmount || "";
+    $: tokenValue = pageState?.tokenAmount || "";
+    $: currencyRatio = currencyValue / tokenValue;
+    $: tokenRatio = tokenValue / currencyValue;
+
+    //$: wallet_store_changes = setLpBalances($wallet_store)
 
     onMount(async () => {
+        console.log($wallet_store)
         // TODO REMOVE HARDCODED VK
-        let balancesRes = await apiService.getUserLpBalance('f8a429afc20727902fa9503f5ecccc9b40cfcef5bcba05204c19e44423e65def')
-        if (balancesRes) balances = balancesRes.points
+        //let balancesRes = await apiService.getUserLpBalance($wallet_store.wallet_state.wallets[0])
+        //if (balancesRes) balances = balancesRes.points
     })
+
+    const setLpBalances = () => {
+        //if ($wallet_store.wallet_state.lp_balance) lp_balance
+    }
+
 </script>
 
 <style>
     .container {
       width: 100%;
-      
+      margin-bottom: 1rem;
     }
     .header{
         display: flex;
@@ -72,16 +84,16 @@
         <p>{statList.includes("poolShare") ? `Current: ${lp_share_percent}%`: ""}</p>
     </div>
     <div class="stats">
-        {#if token_symbol && bothValues}
+        {#if tokenSymbol}
             {#if statList.includes("ratios")}
                 <div class="stat">
-                    <p><strong>{`${currencyValue / tokenValue}`}</strong></p>
-                    <p>{`${config.currencySymbol} per ${token_symbol}`}</p>
+                    <p><strong>{isFinite(currencyRatio) ? `${stringToFixed(currencyValue / tokenValue, 4)}` : '-'}</strong></p>
+                    <p>{`${config.currencySymbol} per ${tokenSymbol}`}</p>
                 </div>
 
                 <div class="stat">
-                    <p><strong>{`${tokenValue / currencyValue }`}</strong></p>
-                    <p>{`${token_symbol} per ${config.currencySymbol}`}</p>
+                    <p><strong>{isFinite(tokenRatio) ? `${stringToFixed(tokenValue / currencyValue, 4)}` : '-'}</strong></p>
+                    <p>{`${tokenSymbol} per ${config.currencySymbol}`}</p>
                 </div>
             {/if}
 

@@ -1,51 +1,59 @@
 
 <script lang="ts">
-  import { onMount } from 'svelte'
-  import { pool_panel_store, wallet_store } from '../store'
+
+  //Stores
+  import { wallet_store } from '../store'
+
+  //Services
   import { WalletService } from '../services/wallet.service'
+  const walletService = WalletService.getInstance()
 
+  //Props
   export let buttonFunction;
+  export let pageState;
 
-  let walletService;
-  let disabled = true;
-
-  onMount(() => {
-    walletService = WalletService.getInstance()
-  })
+  $: disabled = disableButton(pageState);
 
   const createMarket = () => {
+    const { currencyAmount, tokenAmount, selectedToken } = pageState
     walletService.createMarket({
-      'contract': $pool_panel_store.slot_b.selected_token.contract_name,
-      'currency_amount': {'__fixed__': $pool_panel_store.slot_a.input_amount},
-      'token_amount': {'__fixed__': $pool_panel_store.slot_b.input_amount}
+      'contract': selectedToken.contract_name,
+      'currency_amount': {'__fixed__': currencyAmount.toString()},
+      'token_amount': {'__fixed__': tokenAmount.toString()}
     })
   }
 
-  pool_panel_store.subscribe(update => {
-    if (!$pool_panel_store.slot_b.selected_token) return
-    let valid = true
-    if (!$pool_panel_store.slot_a.input_amount || !$pool_panel_store.slot_b.input_amount) {
+  const addLiquidity = () => {
+    const { currencyAmount, tokenAmount, selectedToken } = pageState
+    console.log(pageState)
+    /*
+    walletService.addLiquidity({
+      'contract': selectedToken.contract_name,
+      'currency_amount': {'__fixed__': currencyAmount.toString()},
+      'token_amount': {'__fixed__': tokenAmount.toString()}
+    })
+    */
+  }
+
+  const disableButton = (info) => {
+    if (!info) return true
+    const { currencyAmount, tokenAmount, selectedToken } = info
+    if (!currencyAmount || !tokenAmount || !selectedToken) {
       console.log('fill out all inputs')
-      valid = false
+      return true
     }
-    if ($wallet_store.balance.lt($pool_panel_store.slot_a.input_amount)) {
-      console.log('not enough dTAU')
-      valid = false
-    }
-    if ($pool_panel_store.slot_b.input_amount > $pool_panel_store.slot_b.selected_token.balance) {
-      console.log('not enough Tokens')
-      valid = false
-    }
-    disabled = !valid
-  })
+    return false
+  }
 
 </script>
 
-<div class="container">
-  {#if buttonFunction === 'create'}
-    <button class="swap-button" disabled={disabled} on:click={createMarket}> Create Market </button>
-  {/if}
-</div>
+{#if buttonFunction === 'create'}
+  <button class="swap-button" disabled={disabled} on:click={createMarket}> Create Market </button>
+{/if}
+
+{#if buttonFunction === 'add'}
+  <button class="swap-button" disabled={disabled} on:click={addLiquidity}> Supply </button>
+{/if}
 
 <style>
   .swap-button {
@@ -57,10 +65,6 @@
     font-size: 1.6em;
     font-weight: 600;
     letter-spacing: 0.1em;
-  }
-
-  .container {
-      padding: 10px 20px 10px 20px;
   }
 
   button {
